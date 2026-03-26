@@ -1,0 +1,10 @@
+**/.vscode/
+migrations/
+venv/
+env/
+config.py/
+instance/
+app/static/uploads/
+**/__pycache__/
+**/*.pyc
+**/*.mp4
