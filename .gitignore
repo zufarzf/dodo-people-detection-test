@@ -1,11 +1,23 @@
-**/.vscode/
-migrations/
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments
 venv/
 env/
-config.py/
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+
+# Config
+config.py
+
+# Video files (ignore all except result)
+*.mp4
+!output.mp4
+
+# Optional (если есть)
 instance/
-app/static/uploads/
-**/__pycache__/
-**/.DS_Store/
-**/*.pyc
-**/*.mp4
