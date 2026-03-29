@@ -215,6 +215,16 @@ def draw_table_and_hud(display_frame, roi, frame_index, current_time_sec, person
         2
     )
 
+    cv2.putText(
+        display_frame,
+        f"Press \"q\" to exit",
+        (20, 205),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (0, 0, 255),
+        2
+    )
+
 
 def build_delay_report(events_df):
     delay_rows = []

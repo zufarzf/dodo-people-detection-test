@@ -1,0 +1,10 @@
+frame,timestamp_sec,event,state
+15,0.75,approach_detected,OCCUPIED
+164,8.2,table_became_empty,EMPTY
+302,15.1,approach_detected,OCCUPIED
+1223,61.15,table_became_empty,EMPTY
+1467,73.35,approach_detected,OCCUPIED
+1509,75.45,table_became_empty,EMPTY
+2044,102.2,approach_detected,OCCUPIED
+2150,107.5,table_became_empty,EMPTY
+2221,111.05,approach_detected,OCCUPIED

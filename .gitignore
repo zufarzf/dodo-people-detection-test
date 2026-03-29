@@ -21,3 +21,4 @@ env/
 
 # Optional (если есть)
 instance/
+*.pt
