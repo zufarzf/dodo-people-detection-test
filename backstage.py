@@ -217,8 +217,8 @@ def draw_table_and_hud(display_frame, roi, frame_index, current_time_sec, person
 
     cv2.putText(
         display_frame,
-        f"Press \"q\" to exit",
-        (20, 205),
+        f"Press \"q\" or \"Esc\" to exit",
+        (20, 240),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.7,
         (0, 0, 255),
