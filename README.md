@@ -1,5 +1,4 @@
 # Dodo People Detection Test
-# Table Cleaning Detection Prototype
 
 ## 🇷🇺 Русская версия
 
