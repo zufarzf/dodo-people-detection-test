@@ -6,5 +6,6 @@ config.py/
 instance/
 app/static/uploads/
 **/__pycache__/
+**/.DS_Store/
 **/*.pyc
 **/*.mp4
