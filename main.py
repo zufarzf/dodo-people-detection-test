@@ -1,6 +1,7 @@
 import cv2
 import argparse
 from ultralytics import YOLO
+import pandas as pd
 
 
 
@@ -32,6 +33,37 @@ def boxes_intersect(box_a, box_b):
 		return False
 	
 	return True
+
+
+def build_delay_report(events_df):
+	delay_rows = []
+
+	empty_events = events_df[events_df["event"] ==  "table_became_empty"].reset_index(drop=True)
+	approach_events = events_df[events_df["event"] ==  "approach_detected"].reset_index(drop=True)
+
+	for _, empty_row in empty_events.iterrows():
+		empty_time = empty_row["timestamp_sec"]
+
+		next_approaches = approach_events[approach_events["timestamp_sec"] > empty_time]
+
+		if next_approaches.empty:
+			delay_rows.append({
+				"empty_time_sec": empty_time,
+				"next_approach_time_sec": None,
+				"delay_sec": None,
+			})
+			continue
+
+		next_approach_time = next_approaches.iloc[0]["timestamp_sec"]
+		delay_sec          = round(next_approach_time - empty_time, 2)
+
+		delay_rows.append({
+			"empty_time_sec":         empty_time,
+			"next_approach_time_sec": next_approach_time,
+			"delay_sec":              delay_sec,
+		})
+
+	return pd.DataFrame(delay_rows)
 
 
 def check_person_near_table_in_frame(model, frame, display_frame, table_box):
@@ -96,7 +128,9 @@ def main():
 		print(f"Error:  cannot open video file: {args.video}")
 		return
 	
-	fps = cap.get(cv2.CAP_PROP_FPS)
+	fps    = cap.get(cv2.CAP_PROP_FPS)
+	width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+	height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 	
 	ret, first_frame = cap.read()
 	if not ret:
@@ -108,15 +142,21 @@ def main():
 	cv2.destroyWindow("Select table ROI")
 	
 	x, y, w, h = map(int, roi)
-
 	if w == 0 or h == 0:
 		print("Error: ROI was not selected")
 		cap.release()
 		return
 	
 	table_box = roi_to_xyxy((x, y, w, h))
-
 	cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+	fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+	writer = cv2.VideoWriter("output.mp4", fourcc, fps, (width, height))
+
+	if not writer.isOpened():
+		print("Error: cannot create output video writer")
+		cap.release()
+		return
 
 	model = YOLO("yolov8n.pt")
 
@@ -136,12 +176,13 @@ def main():
 			break
 
 		display_frame     = frame.copy()
-		person_near_table = check_person_near_table_in_frame(model, frame, display_frame, table_box)
+		current_time_sec  = frame_index / fps if fps > 0 else 0
+		person_near_table = check_person_near_table_in_frame(
+								model, frame, display_frame, table_box)
 
 		if person_near_table:
 			near_counter += 1
 			empty_counter = 0
-
 		else:
 			empty_counter += 1
 			near_counter   = 0
@@ -170,15 +211,7 @@ def main():
 
 		table_color = (0, 0, 255) if current_state == "OCCUPIED" else (0, 255, 0)
 		
-		cv2.rectangle(
-			display_frame,
-			(x, y),
-			(x + w, y + h),
-			table_color,
-			2
-		)
-
-		current_time_sec = frame_index / fps if fps > 0 else 0
+		cv2.rectangle(display_frame, (x, y), (x + w, y + h), table_color, 2)
 
 		cv2.putText(
 			display_frame,
@@ -201,14 +234,14 @@ def main():
 		)
 
 		cv2.putText(
-            display_frame,
-            f"Raw near: {'YES' if person_near_table else 'NO'}",
-            (20, 100),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.8,
-            (255, 255, 0),
-            2
-        )
+			display_frame,
+			f"Raw near: {'YES' if person_near_table else 'NO'}",
+			(20, 100),
+			cv2.FONT_HERSHEY_SIMPLEX,
+			0.8,
+			(255, 255, 0),
+			2
+		)
 
 		cv2.putText(
 			display_frame,
@@ -240,23 +273,52 @@ def main():
 			2
 		)
 
+		writer.write(display_frame)
+
 		cv2.imshow("YOLO table monitoring", display_frame)
 
-		key = cv2.waitKey(20) & 0xFF
+		key = cv2.waitKey(1) & 0xFF
 		if key == 27 or key == ord("q"):
 			break
 
 		frame_index += 1
 
 	cap.release()
+	writer.release()
 	cv2.destroyAllWindows()
 
-	print("\nCollected events:")
-	for event in events:
-		print(event)
+	if not events:
+		print("\nNo events collected.")
+		return
 
+	events_df = pd.DataFrame(events)
+	events_df = events_df.sort_values(by=["timestamp_sec", "frame"]).reset_index(drop=True)
 
+	print("\nEvents DataFrame:")
+	print(events_df)
+
+	events_df.to_csv("events.csv", index=False)
+
+	report_df = build_delay_report(events_df)
+
+	print("\nDelay report:")
+	print(report_df)
+
+	report_df.to_csv("report.csv", index=False)
+
+	valid_delays = report_df["delay_sec"].dropna()
+
+	if not valid_delays.empty:
+		average_delay = round(valid_delays.mean(), 2)
+		print(f"\nAverage delay: {average_delay:.2f} sec")
+	else:
+		print("\nAverage delay: not available (no valid pairs found)")
+
+	print("\nSaved files:")
+	print("- output.mp4")
+	print("- events.csv")
+	print("- report.csv")
 
 
 if __name__ == "__main__":
-	main()
+    main()
