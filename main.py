@@ -37,7 +37,7 @@ def boxes_intersect(box_a, box_b):
 def check_person_near_table_in_frame(model, frame, display_frame, table_box):
 	results              = model(frame, verbose=False)
 	person_near_table    = False
-	confidence_threshold = 0.5
+	confidence_threshold = 0.2
 
 	for result in results:
 		boxes = result.boxes
