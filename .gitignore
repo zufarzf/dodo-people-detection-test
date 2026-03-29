@@ -13,7 +13,7 @@ env/
 .DS_Store
 
 # Config
-config.py
+# config.py
 
 # Video files (ignore all except result)
 *.mp4
