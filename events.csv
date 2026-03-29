@@ -1,10 +1,12 @@
 frame,timestamp_sec,event,state
 15,0.75,approach_detected,OCCUPIED
-164,8.2,table_became_empty,EMPTY
+165,8.25,table_became_empty,EMPTY
 302,15.1,approach_detected,OCCUPIED
-1223,61.15,table_became_empty,EMPTY
-1467,73.35,approach_detected,OCCUPIED
-1509,75.45,table_became_empty,EMPTY
+1222,61.1,table_became_empty,EMPTY
+1429,71.45,approach_detected,OCCUPIED
+1511,75.55,table_became_empty,EMPTY
+1815,90.75,approach_detected,OCCUPIED
+1845,92.25,table_became_empty,EMPTY
 2044,102.2,approach_detected,OCCUPIED
 2150,107.5,table_became_empty,EMPTY
 2221,111.05,approach_detected,OCCUPIED

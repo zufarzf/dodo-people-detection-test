@@ -1,234 +1,219 @@
 # Dodo People Detection Test
 
-## 🇷🇺 Русская версия
+# Прототип детекции занятости столика (Computer Vision)
 
-### 📌 Описание
+## 📌 Описание
 
-Это упрощённый прототип системы анализа использования столов в ресторане (например, пиццерии) на основе видео.
+Это прототип системы для анализа использования столика в ресторане (пиццерии) на основе видео.
 
 Система определяет:
 
 * когда стол становится пустым
 * когда к нему подходит человек
-* и считает время между этими событиями
+* и рассчитывает время между этими событиями
+
+Решение реализовано без обучения собственной модели — используется готовая YOLO-модель и простая логика анализа.
 
 ---
 
-### 🎯 Выбранное видео и столик
+## 🎯 Используемое видео и столик
 
-* Использовано видео: **Видео 1** (замени на своё)
-* Один стол выбран вручную через `cv2.selectROI`
-* Стол расположен в **(центре/слева/справа кадра)**
+Для тестирования было выбрано:
 
-Пример ROI:
-
-```
-x = ..., y = ..., w = ..., h = ...
-```
+* Видео: `video1.mp4`
+* Столик: расположен в левой части кадра, примерно по центру по вертикали
+* ROI (область столика) выбирался вручную через `cv2.selectROI`
 
 ---
 
-### 🧠 Логика решения
+## 🧠 Логика работы
 
-1. **Обработка кадров**
+### 1. Детекция людей
 
-   * Видео обрабатывается покадрово через OpenCV
-
-2. **Детекция людей**
-
-   * Используется YOLOv8n
-   * Учитываются только объекты класса `person`
-
-3. **Определение "у стола"**
-
-   * Если bbox человека пересекается с ROI — считаем, что он у стола
-
-4. **Сглаживание**
-
-   * Используются пороги:
-
-     * `occupied_threshold = 8`
-     * `empty_threshold = 12`
-
-5. **Машина состояний**
-
-   * `EMPTY` — стол пуст
-   * `OCCUPIED` — стол занят
-   * Фиксируются события:
-
-     * `approach_detected`
-     * `table_became_empty`
+Используется модель **YOLOv8n (Ultralytics)** для обнаружения людей на каждом кадре.
 
 ---
 
-### 📊 Результаты
+### 2. Определение “человек у стола”
 
-По обработанному видео:
+Текущая реализация:
 
-👉 **Среднее время между уходом и следующим подходом: X.XX секунд**
+* человек считается у стола, если его bounding box пересекается с ROI столика
 
 ---
 
-### 📁 Выходные файлы
+### 3. Сглаживание (anti-flicker)
+
+Используются счётчики кадров:
+
+* `OCCUPIED_THRESHOLD = 16`
+* `EMPTY_THRESHOLD = 24`
+
+Это нужно, чтобы:
+
+* убрать шум
+* избежать мигания состояний
+
+---
+
+### 4. Машина состояний
+
+Состояния:
+
+* `EMPTY` — стол пуст
+* `OCCUPIED` — стол занят
+
+События:
+
+* `approach_detected` — человек подошёл
+* `table_became_empty` — стол освободился
+
+---
+
+### 5. Аналитика
+
+Система:
+
+* записывает события в `events.csv`
+* рассчитывает задержки в `report.csv`
+
+---
+
+## 📊 Результаты
+
+По выбранному участку видео:
+
+👉 Среднее время между уходом и следующим подходом: **9.18 секунд**
+
+- Всего событий обнаружено: **11**
+- Количество рассчитанных задержек: **5**
+
+Пример:
+
+- стол освободился в **8.25с**
+- следующий подход в **15.10с**
+- задержка: **6.85с*
+
+---
+
+## 📁 Выходные файлы
 
 * `output.mp4` — видео с визуализацией
-* `events.csv` — события
-* `report.csv` — расчёты
+* `events.csv` — список событий
+* `report.csv` — расчёт задержек
 
 ---
 
-### ⚠️ Ограничения
+## 🖼️ Проблемные случаи
 
-* Стол выбирается вручную
+### 1. Частичная видимость и отсутствие движения
+
+![Video1 Case](screenshots/problem_frame_in_video1.png)
+
+Человек сидит спиной к камере и почти не двигается.
+YOLO не обнаруживает его → стол считается пустым.
+
+---
+
+### 2. Человек частично вне кадра
+
+![Video2 Case](screenshots/problem_frame_in_video2.png)
+
+Видна только часть тела → модель не распознаёт человека.
+
+---
+
+### 3. Перекрытие и расстояние
+
+![Video3 Case](screenshots/problem_frame_in_video3.png)
+
+Люди далеко или перекрыты объектами → нестабильная детекция.
+
+---
+
+### 4. Ложное срабатывание (пересечение с ROI)
+
+![Video1 Case 2](screenshots/problem_frame_in_video1-2.png)
+
+Человек сидит за соседним столом, но часть его (например кресло или тело) попадает в ROI выбранного столика.
+Из-за этого система считает стол занятым, хотя фактически он пуст.
+
+---
+
+## ⚠️ Ограничения текущего подхода
+
 * Простая логика пересечения bbox
-* Нет трекинга
+* Нет трекинга объектов
 * Нет разделения гостей и сотрудников
-* Возможны ошибки детекции
+* Ошибки при частичной видимости
+* Ошибки при перекрытиях
 
 ---
 
-### 🛠️ Возможные улучшения
+## 🛠️ Возможные улучшения
 
-* Добавить трекинг
-* Использовать IoU или центр bbox
-* Добавить поддержку нескольких столов
-* Улучшить устойчивость
+Для повышения точности можно:
 
----
-
-### 🖼️ Проблемный кадр
-
-![Проблемный кадр](screenshots/problem_frame.png)
-
-Описание:
-
-* Частичное пересечение человека со столом
-* Возможны ложные срабатывания
+* учитывать **процент пересечения bbox с ROI**
+* проверять **центр bbox человека внутри ROI**
+* добавить трекинг (например DeepSORT)
+* использовать более сложную геометрию (IoU)
 
 ---
 
-## 🚀 Запуск
+## 🚀 Запуск проекта
+
+### 1. Клонировать репозиторий
+
+```bash
+git clone https://github.com/zufarzf/dodo-people-detection-test.git
+cd dodo-people-detection-test
+(Если файл взяли из письма этот шаг не обязателен)
+(ps. В гит не удалось загрузить видео для теста.)
+```
+
+---
+
+### 2. Создать виртуальное окружение
+
+```bash
+python -m venv venv
+```
+
+Активировать:
+
+#### Windows:
+
+```bash
+venv\Scripts\activate
+```
+
+#### Linux / Mac:
+
+```bash
+source venv/bin/activate
+```
+
+---
+
+### 3. Установить зависимости
 
 ```bash
 pip install -r requirements.txt
+```
+
+---
+
+### 4. Запустить
+
+```bash
 python main.py --video video1.mp4
 ```
 
 ---
 
-## 🇬🇧 English Version
+## 💡 Примечание
 
-### 📌 Overview
-
-This project is a simplified prototype for detecting table usage events in a restaurant (e.g., a pizzeria) using video analysis.
-
-The system detects:
-
-* when a table becomes empty
-* when a person approaches the table
-* and calculates the delay between these events
-
-The solution is designed as a lightweight and explainable pipeline without training custom models.
+Для ускорения работы анализировалась часть видео (не полный ролик), чтобы продемонстрировать логику работы системы.
 
 ---
-
-### 🎯 Selected Video and Table
-
-* Video used: **Video 1** (replace with actual one)
-* One table was selected manually using `cv2.selectROI`
-* The selected table is clearly visible and located in the **(center/left/right part of the frame)**
-
-Example ROI (after selection):
-
-```
-x = ..., y = ..., w = ..., h = ...
-```
-
----
-
-### 🧠 Detection Logic
-
-The pipeline consists of the following steps:
-
-1. **Frame Processing**
-
-   * Video is processed frame-by-frame using OpenCV
-
-2. **Person Detection**
-
-   * YOLOv8n (Ultralytics) is used to detect people in each frame
-   * Only objects of class `person` are considered
-
-3. **Table Interaction Detection**
-
-   * A person is considered "near the table" if their bounding box intersects with the selected ROI
-
-4. **Temporal Smoothing**
-
-   * To reduce noise, frame counters are used:
-
-     * `occupied_threshold = 8`
-     * `empty_threshold = 12`
-
-5. **State Machine**
-
-   * The system maintains two states:
-
-     * `EMPTY`
-     * `OCCUPIED`
-   * Transitions generate events:
-
-     * `approach_detected`
-     * `table_became_empty`
-
----
-
-### 📊 Results
-
-From the processed video:
-
-* Total events detected: **X** (optional)
-* Average delay between table becoming empty and next approach:
-
-👉 **Average delay: X.XX seconds**
-
----
-
-### 📁 Output Files
-
-* `output.mp4` — annotated video with visualization
-* `events.csv` — raw event log
-* `report.csv` — calculated delays
-
----
-
-### ⚠️ Limitations
-
-* ROI is selected manually (no automatic table detection)
-* Intersection-based logic may produce false positives
-* No distinction between staff and guests
-* No object tracking (each frame processed independently)
-* YOLO detection may occasionally miss or misdetect people
-
----
-
-### 🛠️ Possible Improvements
-
-* Add tracking (e.g., DeepSORT)
-* Use IoU or center-based filtering instead of simple intersection
-* Detect staff vs guests
-* Support multiple tables
-* Improve robustness with temporal models
-
----
-
-### 🖼️ Problematic Case
-
-Below is an example of a problematic frame:
-
-![Problem frame](screenshots/problem_frame.png)
-
-Description:
-
-* A person is near the table but only partially intersects ROI
-* This may lead to false "occupied" detection
