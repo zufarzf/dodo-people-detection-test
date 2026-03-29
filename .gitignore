@@ -17,6 +17,7 @@ env/
 
 # Video files (ignore all except result)
 *.mp4
+output.mp4
 
 # Optional (если есть)
 instance/
